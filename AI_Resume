@@ -1,0 +1,57 @@
+import spacy
+import PyPDF2
+import re
+from sklearn.feature_extraction.text import TfidfVectorizer
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
+
+# Load NLP Model
+nlp = spacy.load("en_core_web_sm")
+
+# Function to extract text from PDF
+def extract_text_from_pdf(pdf_path):
+    with open(pdf_path, "rb") as file:
+        reader = PyPDF2.PdfReader(file)
+        text = " ".join([page.extract_text() for page in reader.pages if page.extract_text()])
+    return text
+
+# Function to extract keywords from job description
+def extract_keywords(job_description):
+    doc = nlp(job_description)
+    keywords = [token.text for token in doc if token.pos_ in ["NOUN", "PROPN", "ADJ"]]
+    return list(set(keywords))
+
+# Function to analyze resume against job description
+def analyze_resume(resume_text, job_description):
+    resume_doc = nlp(resume_text)
+    job_keywords = extract_keywords(job_description)
+    found_keywords = [word for word in job_keywords if word
+.lower() in resume_text.lower()]
+    missing_keywords = list(set(job_keywords) - set(found_keywords))
+    
+    return {
+        "found_keywords": found_keywords,
+        "missing_keywords": missing_keywords,
+        "match_percentage": (len(found_keywords) / len(job_keywords)) * 100 if job_keywords else 0
+    }
+
+# Function to generate word cloud
+def generate_word_cloud(text):
+    wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
+    plt.figure(figsize=(10, 5))
+    plt.imshow(wordcloud, interpolation='bilinear')
+    plt.axis("off")
+    plt.show()
+
+# Example usage
+job_description = """Python Developer with experience in Django, Flask, RESTful APIs, 
+SQL, unit testing, Agile, cloud platforms, debugging, data structures, and algorithms."""
+resume_text = extract_text_from_pdf("resume.pdf")
+analysis = analyze_resume(resume_text, job_description)
+
+print("Found Keywords:", analysis["found_keywords"])
+print("Missing Keywords:", analysis["missing_keywords"])
+print("Match Percentage:", analysis["match_percentage"], "%")
+
+# Generate word cloud for better visualization
+generate_word_cloud(resume_text)
